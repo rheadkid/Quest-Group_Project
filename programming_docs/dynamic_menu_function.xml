@@ -1,0 +1,57 @@
+// I just used this 'dynamic_menu_function' code for 'character creation' stuff as my example here of it, but it can be tweaked to be used for anything, such as dialogue/conversation/topics too, and/or whatever else as well
+// some of the parameters can be removed/adjusted/tweaked, this is just an example.
+// also, I used a Function for this example, but we can use Objects and their Script Attributes, and Delegates, instead
+
+<game name="example_game">
+  <attr name="sex_stringlist_attribute" type="simplestringlist">male;female</attr>
+  <attr name="human_race_stringlist_attribute" type="simplestringlist">european;african;asian;arabian;american;australian</attr>
+  <attr name="start" type="script">
+    dynamic_menu_function ("Sex?", game.sex_stringlist_attribute, player, "sex_string_attribute")
+    on ready {
+      dynamic_menu_function ("Race?", game.human_race_stringlist_attribute, player, "race_string_attribute")
+    }
+  </attr>
+</game>
+
+<object name="room">
+</object>
+
+<object name="player">
+  <attr name="parent" type="object">room</attr>
+  <attr name="sex_string_attribute" type="string">unknown</attr>
+  <attr name="race_string_attribute" type="string">unknown</attr>
+</object>
+
+<function name="dynamic_menu_function" parameters="menu_prompt_string_parameter, object_dot_attribute_stringlist_parameter, name_of_object_parameter, name_of_attribute_parameter">
+  <![CDATA[
+    ClearScreen
+    msg (menu_prompt_parameter)
+    msg ("(Type in the number of your choice)")
+    msg ("")
+    msg ("0. random")
+    numbering_integer_variable = 0
+    foreach (item_variable, object_dot_attribute_stringlist_parameter) {
+      numbering_integer_variable = numbering_integer_variable + 1
+      msg (numbering_integer_variable + ". " + item_variable)
+    }
+    get input {
+      ClearScreen
+      if (IsInt (result)) {
+        input_integer_variable = ToInt (result)
+        list_count_integer_variable = ListCount (object_dot_attribute_stringlist_parameter)
+        last_index_number_integer_variable = list_count_integer_variable - 1
+        if (input_integer_variable = 0) {
+          randomly_selected_item_string_variable = StringListItem (object_dot_attribute_stringlist_parameter, GetRandomInt (0, last_index_number_integer_variable))
+          set (name_of_object_parameter, name_of_attribute_parameter, randomly_selected_item_string_variable)
+        } else if (input_integer_variable > 0 and input_integer_variable < list_count_integer_variable) {
+          selected_item_string_variable = StringListItem (object_dot_attribute_stringlist_parameter, input_integer_variable)
+          set (name_of_object_parameter, name_of_attribute_parameter, randomly_selected_item_string_variable, selected_item_string_variable)
+        } else { // if input is 'out of bounds' (wrong input, try again)
+          dynamic_menu_function (menu_prompt_string_parameter, object_dot_attribute_stringlist_parameter, name_of_object_parameter, name_of_attribute_parameter)
+        }
+      } else { // if not IsInt (wrong input, try again)
+        dynamic_menu_function (menu_prompt_string_parameter, object_dot_attribute_stringlist_parameter, name_of_object_parameter, name_of_attribute_parameter)
+      }
+    } // end of 'get input'
+  ]]>
+</function>

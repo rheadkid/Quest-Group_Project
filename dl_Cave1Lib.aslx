@@ -1,0 +1,196 @@
+<library>
+<object name="DL_Cave1">
+    <inherit name="editor_room" />
+    <objectslistprefix type="string"></objectslistprefix>
+    <description type="script">
+      if (DL_Entrance.dl_Last_Room="Outside") {
+        msg ("You crawl through the hole and into the cool of the cave and look around. Other than the cave entrance behind you, there is only the downward sloping passage to the east. The cave seems to be a natral cavern that has been widened by the use of tools.")
+      }
+      else {
+        msg ("You make your way back to the entrance.")
+      }
+    </description>
+    <usedefaultprefix type="boolean">false</usedefaultprefix>
+    <enter type="script">
+      DL_Entrance.dl_Last_Room = "Cave1"
+    </enter>
+    <beforeenter type="script">
+    </beforeenter>
+    <alias>Cave entrance</alias>
+    <exit alias="east" to="DL_Cave2">
+      <inherit name="eastdirection" />
+    </exit>
+    <exit alias="west" to="DL_Entrance">
+      <inherit name="westdirection" />
+    </exit>
+    <exit alias="out" to="DL_Entrance">
+      <inherit name="outdirection" />
+    </exit>
+  </object>
+  <object name="DL_Cave2">
+    <inherit name="editor_room" />
+    <objectslistprefix type="string"></objectslistprefix>
+    <description type="script"><![CDATA[
+      if (DL_Entrance.dl_Last_Room="Cave1") {
+        msg ("The passage continues down to the east and rises sharply to the west. There are more signs of tool marks on the cavern walls. This is a sure sign that someone worked this passage. You know that worked passages leads to treasure. You start to get more excited with every step.<br/>")
+      }
+      else {
+        msg ("You climb back up from the decending passage.")
+      }
+    ]]></description>
+    <usedefaultprefix type="boolean">false</usedefaultprefix>
+    <enter type="script">
+      DL_Entrance.dl_Last_Room = "Cave2"
+    </enter>
+    <alias>Decending Passage</alias>
+    <exit alias="west" to="DL_Cave1">
+      <inherit name="westdirection" />
+    </exit>
+    <exit alias="east" to="DL_Cave3">
+      <inherit name="eastdirection" />
+    </exit>
+  </object>
+  <object name="DL_Cave3">
+    <inherit name="editor_room" />
+    <objectslistprefix type="string"></objectslistprefix>
+    <description type="script">
+      if (DL_Entrance.dl_Last_Room="Cave2") {
+        msg ("The passages flatens out somewhat here, but still continues down to the east and up in the west. This section is mostly worked walls with little sign of where the original cave was. Someone put in a lot of work to make this passage for it to go nowhere.")
+      }
+      else {
+        msg ("You are relieved to reach this point. The climb back up will be much easer now.")
+      }
+    </description>
+    <usedefaultprefix type="boolean">false</usedefaultprefix>
+    <enter type="script">
+      DL_Entrance.dl_Last_Room = "Cave3"
+    </enter>
+    <alias>Cavern</alias>
+    <exit alias="west" to="DL_Cave2">
+      <inherit name="westdirection" />
+    </exit>
+    <exit alias="east" to="DL_Cave4">
+      <inherit name="eastdirection" />
+    </exit>
+  </object>
+  <object name="DL_Cave4">
+    <inherit name="editor_room" />
+    <objectslistprefix type="string"></objectslistprefix>
+    <description type="script">
+      if (DL_Entrance.dl_Last_Room="Cave3") {
+        msg ("You slip on some loose sand here and almost fall down. The passage sloops much more now and it looks like it gets steeper a little further to the east. If this is a trap, then this is your first sign. The loose sand is making every step just a little bit more hazardus.")
+      }
+      else if (DL_Entrance.dl_Last_Room="Cave5") {
+        msg ("You manage to climb higher out of the sloppery passage.")
+      }
+    </description>
+    <usedefaultprefix type="boolean">false</usedefaultprefix>
+    <enter type="script">
+      DL_Entrance.dl_Last_Room = "Cave4"
+    </enter>
+    <alias>Steep sandy passage</alias>
+    <exit alias="west" to="DL_Cave3">
+      <inherit name="westdirection" />
+    </exit>
+    <exit alias="east" to="DL_Cave5">
+      <inherit name="eastdirection" />
+    </exit>
+  </object>
+  <object name="DL_Cave5">
+    <inherit name="editor_room" />
+    <objectslistprefix type="string"></objectslistprefix>
+    <description type="script">
+      if (DL_Entrance.dl_Last_Room="Cave4") {
+        msg ("You continue down the slope. The sides have been worked smooth just like the floor which it covered in more sand. Every step you make is more slipery than the last. If you continue this way, you may not be able to climb back out. But, if there is a treasure at the bottom of this, it could be worth the risk.")
+      }
+      else if (DL_Entrance.dl_Last_Room="Cave6") {
+        msg ("You managed to climb back up from the trap.")
+      }
+    </description>
+    <usedefaultprefix type="boolean">false</usedefaultprefix>
+    <enter type="script">
+      DL_Entrance.dl_Last_Room = "Cave5"
+    </enter>
+    <alias>Steep sandy passage</alias>
+    <exit alias="west" to="DL_Cave4">
+      <inherit name="westdirection" />
+      <runscript />
+      <script type="script">
+        R = GetRandomInt(1,6)
+        if (R=1 or R=2 or R=3 or R=4) {
+          msg ("You try to climb the sloop but it is too slippery and you slide back down.")
+          // MoveObject (player, DL_Cave5)
+        }
+        if (R=5 or R=6) {
+          msg ("You manage to climb the slope, but after many failed attempts.")
+          MoveObject (player, DL_Cave4)
+        }
+      </script>
+    </exit>
+    <exit alias="east" to="DL_Cave6">
+      <inherit name="eastdirection" />
+    </exit>
+  </object>
+  <object name="DL_Cave6">
+    <inherit name="editor_room" />
+    <objectslistprefix type="string"></objectslistprefix>
+    <description><![CDATA[The last few steps were more of a slide than steps. But, you made it to the bottom. You look around at the blank walls. There is no indication of any treasure, just a bunch of bones scatteres around the floor. Some human, some animal, and some neither. <br/>Well, if there was a treasure, someone else got it out, and from the looks of the scatered bones, several did not make it out. Looking around, you are begining to wonder if your bones will be added to the piles.<br/>]]></description>
+    <usedefaultprefix type="boolean">false</usedefaultprefix>
+    <enter type="script">
+      DL_Entrance.dl_Last_Room = "Cave6"
+    </enter>
+    <alias>Bottom of passage</alias>
+    <exit alias="west" to="DL_Cave5">
+      <inherit name="westdirection" />
+      <runscript />
+      <script type="script">
+        R = GetRandomInt(1,6)
+        if (R=1 or R=2 or R=3 or R=4) {
+          msg ("You try to climb the sloop but it is too slippery and you slide back down.")
+          // MoveObject (player, DL_Cave6)
+        }
+        if (R=5 or R=6) {
+          msg ("You manage to climb the slope, but after many failed attempts.")
+          MoveObject (player, DL_Cave5)
+        }
+      </script>
+    </exit>
+  </object>
+  <object name="DL_Entrance">
+  <inherit name="gateway_type" /> <!-- added gateway type -->
+    <inherit name="editor_room" />
+    <attr name="feature_startscript" type="boolean">false</attr> <!-- for a gateway type -->
+    <gateway /> <!-- for a gateway type -->
+    <attr name="_initialise_" type="script"> <!-- for a gateway type -->
+      AddToHubGateway (this)
+    </attr> <!-- for a gateway type -->
+    <alias>A cave entrance</alias>
+    <usedefaultprefix type="boolean">false</usedefaultprefix>
+    <description type="script">
+      if (DL_Entrance.dl_Last_Room="Outside") {
+        msg ("You are following the mountain trail when you notice a small opening in the rock to the east. It is not much more than 3 foot round, and mostly hidden by the brush. It looks like it could be an animal den, but you know that looks could be deceiving.")
+      }
+	  else if (DL_Entrance.dl_Last_Room="hub") {
+	    msg ("You are on a mountain trail. You notice a small opening in the rock to the east. It is not much more than 3 foot round, and mostly hidden by the brush. It looks like it could be an animal den, but you know that looks could be deceiving.")
+	  }
+      else {
+        msg ("You leave the cave and continue your travels.")
+      }
+	    </description>
+	<dimensionname>The Cave</dimensionname>  <!-- Added dimension name -->
+    <beforeenter type="script">
+	if (not HasAttribute(DL_Entrance, "dl_Last_Room")) {
+	  DL_Entrance.dl_Last_Room = "hub"
+	}
+    </beforeenter>
+    <enter type="script">
+      DL_Entrance.dl_Last_Room = "Outside"
+    </enter>
+    <exit alias="in" to="DL_Cave1">
+      <inherit name="indirection" />
+    </exit>
+    <exit alias="east" to="DL_Cave1">
+      <inherit name="eastdirection" />
+    </exit>
+  </object>
+</library>

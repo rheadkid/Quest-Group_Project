@@ -1,0 +1,388 @@
+<!--Saved by Quest 5.8.6702.22391-->
+<asl version="550">
+  <include ref="English.aslx" />
+  <include ref="Core.aslx" />
+  <include ref="group_project_library.aslx" />
+  <game name="DIMENSIONS OF INFINITY">
+    <gameid>d0750240-908a-41ae-af2d-83e66c71b5a9</gameid>
+    <version>0.0.1</version>
+    <firstpublished>2017</firstpublished>
+    <feature_advancedscripts />
+    <description><![CDATA[This is the template for the group project. Your zone starts with the room "gateway". You can do what you like with that room, it belongs to you - but you must give it a new name. Note that it has a gateway tab, which is where you should set the name to appear on the list of choices to which you can travel.<br/><br/>All rooms, objects, exits (if you name them), commands (if you name them) and functions you add to the game must have a name that starts with your initials (or other two letter identifier), and that includes the new name for gateway. This is to ensure there are no conflicts. If two people have a room called gateway in their zone, we will have problems when we put it together.<br/><br/>Commands and verb elements will generally be better submitted to the library. Functions might too if others will use them.<br/><br/>Use the game.combined Attribute to test in game if this is the final version or just your bit.<br/><br/>    if (game.combined) msg("This is the full version!")<br/><br/>NOTE: Any changes you make to game, hub, or player will be lost (as well as any objects or commands or exits inside them) when you game is combined with everything else.<br/><br/>NOTE: The library may be updated periodically, and that may well affect the hub and player, but should not affect your zone.]]></description>
+    <combined type="boolean">false</combined>
+    <classiclocation type="boolean">false</classiclocation>
+    <customlocationcolour>Silver</customlocationcolour>
+    <customlocationtextcolour>Black</customlocationtextcolour>
+    <customlocationbordercolour>Black</customlocationbordercolour>
+    <feature_asktell />
+    <feature_advancedwearables />
+    <feature_annotations />
+    <feature_lightdark />
+    <feature_limitinventory />
+    <showmoney />
+    <showhealth />
+    <showscore />
+    <appendobjectdescription />
+    <author>David Agnew</author>
+    <subtitle>PART ONE</subtitle>
+    <category>Science-Fiction</category>
+    <cover>dimensions_placeholder.png</cover>
+    <enablehyperlinks type="boolean">false</enablehyperlinks>
+    <showpanes type="boolean">false</showpanes>
+    <autodescription />
+    <autodisplayverbs type="boolean">false</autodisplayverbs>
+    <attr name="autodescription_youarein_useprefix" type="boolean">false</attr>
+    <attr name="autodescription_youcango" type="int">4</attr>
+    <attr name="autodescription_description" type="int">2</attr>
+    <attr name="autodescription_youcansee" type="int">3</attr>
+    <defaultfont>'Consolas', monospace</defaultfont>
+    <borderlesscursor />
+    <showborder />
+    <showtitle type="boolean">false</showtitle>
+    <showcommandbar />
+    <defaultwebfont>Russo One</defaultwebfont>
+    <start type="script">
+      StartScript
+    </start>
+    <roomenter type="script"><![CDATA[
+      if (ListCount(ScopeUnlockedExitsForRoom(game.pov.parent)) > 0) {
+        exitsgood = false
+        foreach (ex, ScopeUnlockedExitsForRoom(game.pov.parent)) {
+          // if (not ex.scenery) {
+            exitsgood = true
+            // }
+        }
+        if (exitsgood) {
+          list = ScopeUnlockedExitsForRoom(game.pov.parent)
+          s = "Obvious exits: "
+          foreach (ex, list) {
+            exalt = GetDisplayAlias(ex)
+            if (HasAttribute(ex,"alt")) {
+              if (ListCount(ex.alt)>0) {
+                exalt = ex.alt[0]
+              }
+            }
+            s = s + UCase(exalt)
+            i = ListCount(list)
+            if (not list[i-1] = ex) {
+              s = s + " | "
+            }
+          }
+          js = CapFirst(GetDisplayName(game.pov.parent))+ "&emsp;"
+          js = js + "<span style=\"float:right;margin-right:1%;\">"
+          js = js + s + "</span>"
+          JS.updateLocation (js)
+        }
+      }
+    ]]></roomenter>
+  </game>
+  <object name="hub">
+    <inherit name="editor_room" />
+    <attr name="feature_startscript" type="boolean">false</attr>
+    <usedefaultprefix type="boolean">false</usedefaultprefix>
+    <description type="script">
+      DescribeHub
+    </description>
+    <enter type="script">
+      HubEnterScript
+      game.pov.dimension = this
+    </enter>
+    <object name="player">
+      <inherit name="editor_object" />
+      <inherit name="editor_player" />
+      <isfemale type="boolean">false</isfemale>
+      <race>human</race>
+      <attr name="pov_look" type="script">
+        DescribePlayer
+      </attr>
+    </object>
+    <command name="TravelFromHub">
+      <pattern>travel;t</pattern>
+      <script>
+        ShowMenu ("Travel to where?", GetDirectChildren(destinations), true) {
+          msg (TravelToHub.travelmsg)
+          dest = GetObject(result)
+          player.parent = dest.to
+          player.dimension = dest.to
+        }
+      </script>
+    </command>
+    <object name="destinations">
+      <inherit name="editor_object" />
+      <visible type="boolean">false</visible>
+    </object>
+  </object>
+  <object name="gateway">
+    <inherit name="gateway_type" />
+    <inherit name="editor_room" />
+    <attr name="feature_startscript" type="boolean">false</attr>
+    <gateway />
+    <attr name="_initialise_" type="script">
+      AddToHubGateway (this)
+    </attr>
+  </object>
+  <object name="rh_Pentagram">
+    <inherit name="gateway_type" />
+    <inherit name="editor_room" />
+    <attr name="feature_startscript" type="boolean">false</attr>
+    <gateway />
+    <alias>Pentagram</alias>
+    <dimensionname>Angeapae</dimensionname>
+    <attr name="_initialise_" type="script">
+      AddToHubGateway (this)
+    </attr>
+    <firstenter type="script"><![CDATA[
+      game.pov.known_spells = NewStringList()
+      game.pov.changedknown_spells => {
+        if (ListCount(game.pov.know_spells)>3) {
+          list remove (game.pov.know_spells, game.pov.know_spells[0])
+        }
+      }
+    ]]></firstenter>
+    <beforeenter type="script">
+      JS.eval ("$('.travel-msg').last().html('Reality flickers around you.  Once your surroundings have settled, you find yourself in an unfortunate situation...');")
+    </beforeenter>
+    <object name="rh_Wizard">
+      <inherit name="editor_object" />
+      <inherit name="male" />
+      <look>He is dressed in stereotypical wizard garb.  Pointy hat, long robe, and all that.</look>
+      <takemsg>{once:You are currently trapped inside of the pentagram.  }You cannot reach him.</takemsg>
+      <displayverbs type="stringlist">
+        <value>Look at</value>
+      </displayverbs>
+      <alias>Wizard</alias>
+      <taunt type="script"><![CDATA[
+        firsttime {
+          msg ("\"<i><span title=\"Don't taunt me, foul dimen!\" style='cursor:pointer;'>On'tdae aunttae eemae, oulfae imendae!</span></i>\" he booms, his voice sending shivers through what you call a spine.  \"<i><span title=\"Do not force me to throw the book at you!\" style='cursor:pointer;'>Oodae otnae orcefae emae ootae owthrae eethae ookbae atyae ooyae!!!</span></i>\"")
+        }
+        otherwise {
+          firsttime {
+            MoveObject (rh_spell_book, rh_Pentagram)
+            msg ("The wizard throws a {object:rh_spell_book:Book} at you.  It bounces off of your thick skull and lands just inside of the pentagram.")
+            ListAdd (game.lastobjects, rh_spell_book)
+            DecreaseHealth (5)
+          }
+          otherwise {
+            msg ("\"<i><span title=\"Don't taunt me, I say\" style='cursor:pointer;'></span>\"On'tdae aunttae eemae, Eye-ae aysae\",\" grumbles the wizard, nonchalantly waving you off.")
+          }
+        }
+      ]]></taunt>
+      <speak type="script">
+        do (this, "taunt")
+      </speak>
+    </object>
+    <object name="rh_Pentagram1">
+      <inherit name="editor_object" />
+      <alias>Pentagram</alias>
+      <takemsg>That appears to be part of the floor.</takemsg>
+      <look>It's a symbol on the floor.  (A star, with a circle around it.)</look>
+      <displayverbs type="stringlist">
+        <value>Look at</value>
+      </displayverbs>
+    </object>
+    <object name="rh_Room1">
+      <inherit name="editor_object" />
+      <alias>Room</alias>
+      <attr name="times_examined" type="int">0</attr>
+      <displayverbs type="stringlist">
+        <value>Look at</value>
+      </displayverbs>
+      <scenery />
+      <look type="script">
+        switch (this.times_examined) {
+          case (0) {
+          }
+          case (1) {
+          }
+          case (2) {
+          }
+        }
+        ShowRoomDescription
+        this.times_examined = this.times_examined + 1
+      </look>
+    </object>
+    <object name="rh_glowing_scroll">
+      <inherit name="editor_object" />
+      <feature_lightdark />
+      <lightsource />
+      <lightstrength>weak</lightstrength>
+      <take />
+      <look><![CDATA[<i><h3>Frotz</h3></i><br/><br/>Causes an object to cast light.]]></look>
+      <alias>Glowing Scroll</alias>
+      <gnusto type="script"><![CDATA[
+        if (rh_spell_book.parent = game.pov) {
+          foreach (o, GetDirectChildren(this)) {
+            MoveObject (o, rh_spell_book)
+            spellname = o.alias
+          }
+          foreach (cmd, AllCommands()) {
+            if (cmd.parent = this) {
+              cmd.parent = null
+            }
+          }
+          RemoveObject (this)
+          msg ("The scroll vanishes with a <i>ZAMF!</i>  Your Spell Book now contains the "+spellname+".")
+        }
+        else {
+          msg ("You have no Spell Book.")
+        }
+      ]]></gnusto>
+      <object name="rh_frotz_spell">
+        <inherit name="editor_object" />
+        <inherit name="rh_spell_type" />
+        <cmdpattern>FROTZ #OBJECT#</cmdpattern>
+        <scenery />
+        <alias>FROTZ Spell</alias>
+        <listname>Frotz</listname>
+        <learn type="script">
+          if (not ListContains(game.pov.known_spells,this.listname)) {
+            list add (game.pov.known_spells, this.listname)
+            msg ("You have committed the "+this.alias+" to memory.")
+          }
+          else {
+            msg ("You've already got that one memorized.")
+          }
+        </learn>
+        <look type="script"><![CDATA[
+          msg ("<i><h3>Frotz</h3></i>Causes an object to cast light.<br/>")
+        ]]></look>
+        <usedefaultprefix type="boolean">false</usedefaultprefix>
+        <prefix>the</prefix>
+      </object>
+    </object>
+  </object>
+  <object name="rh_spell_book">
+    <inherit name="editor_object" />
+    <inherit name="rh_spell_book_type" />
+    <take />
+    <alias>Spell Book</alias>
+    <look>It's a nice, leather tome with gold letters.</look>
+    <prefix>a</prefix>
+    <object name="rh_gnusto_spell">
+      <inherit name="editor_object" />
+      <inherit name="rh_spell_type" />
+      <cmdpattern>FROTZ #OBJECT#</cmdpattern>
+      <scenery />
+      <alias>GNUSTO Spell</alias>
+      <listname>Frotz</listname>
+      <learn type="script">
+        msg ("There is no need to memorize the GNUSTO Spell.")
+      </learn>
+      <look type="script"><![CDATA[
+        msg ("<i><h3>GNUSTO #SCROLLNAME#</h3></i>Copies a spell to a Spell Book.<br/>")
+      ]]></look>
+      <usedefaultprefix type="boolean">false</usedefaultprefix>
+      <prefix>the</prefix>
+    </object>
+  </object>
+  <verb name="rh_taunt_verb">
+    <property>taunt</property>
+    <pattern>taunt</pattern>
+    <defaultexpression>"You can't taunt " + object.article + "."</defaultexpression>
+  </verb>
+  <verb name="rh_gnusto_verb">
+    <property>gnusto</property>
+    <pattern>gnusto</pattern>
+    <defaultexpression>"That only works on scrolls."</defaultexpression>
+  </verb>
+  <verb name="rh_learn_verb">
+    <property>learn</property>
+    <pattern>learn</pattern>
+    <defaultexpression>"You can't learn " + object.article + "."</defaultexpression>
+  </verb>
+  <command name="rh_frotz_cmd">
+    <pattern>frotz #object#;cast frotz on #object#</pattern>
+    <magical />
+    <script><![CDATA[
+      if ((not ListContains(game.pov.known_spells,"Frotz") and not rh_glowing_scroll.parent = game.pov)) {
+        msg (game.pov.known_spells)
+        msg ("You don't know that spell.")
+      }
+      else if (GetBoolean(object, "lightsource")) {
+        msg (WriteVerb(object, "be") + " already a source of light, but you cast the FROTZ spell on "+GetDisplayName(object)+" anyway.")
+        if (rh_glowing_scroll.parent = game.pov) {
+          msg ("<br/>The scroll vanishes.")
+          RemoveObject (rh_glowing_scroll)
+        }
+      }
+      else {
+        object.lightsource = true
+        object.lightstrength = "strong"
+        object.frotzstatus = "  ("+CapFirst(object.gender)+" is glowing.)"
+        if (HasString(object, "look")) {
+          object.look = object.look + object.frotzstatus
+        }
+        else if (not HasScript(object, "look")) {
+          object.look = object.frotzstatus
+        }
+        if (not HasString(object, "alias")) {
+          object.alias = object.name
+        }
+        msg ("You cast {i:Frotz} on " + GetDisplayName(object) + ".")
+        if (rh_glowing_scroll.parent = game.pov) {
+          msg ("<br/>The scroll vanishes.")
+          RemoveObject (rh_glowing_scroll)
+        }
+      }
+    ]]></script>
+  </command>
+  <type name="rh_spell_book_type">
+    <inherit name="editor_object" />
+    <inherit name="openable" />
+    <feature_container />
+    <look><![CDATA[It's a nice, leather tome with gold letters.<br/><br/>{command:READ BOOK}{colour:.}<br/>]]></look>
+    <inventoryverbs type="stringlist">
+      <value>Look at</value>
+      <value>Open</value>
+      <value>Close</value>
+    </inventoryverbs>
+    <alt type="stringlist">
+      <value>book</value>
+    </alt>
+    <hintlist type="stringlist">
+      <value>Hint 1:  Have you tried reading the book?</value>
+      <value>Hint 2:  Did you OPEN it before you tried to read it?</value>
+      <value>Hint 3:  If you have your side panes on, you can directly interact with the spells in the book when it's open.</value>
+    </hintlist>
+    <usedefaultprefix type="boolean">false</usedefaultprefix>
+    <read type="script">
+      if (this.isopen) {
+        scrollsin = NewObjectList()
+        foreach (scroll, GetDirectChildren(this)) {
+          if (not ListContains(scrollsin, scroll)) {
+            if (scroll.visible) {
+              list add (scrollsin, scroll)
+            }
+          }
+        }
+        ShowMenu ("Known Spells:", scrollsin, true) {
+          HandleSingleCommand ("x " + result)
+        }
+      }
+      else {
+        msg ("You'll have to open it first.")
+      }
+    </read>
+  </type>
+  <type name="rh_spell_type">
+    <scenery />
+    <cmdpattern type="string"></cmdpattern>
+    <inventoryverbs type="stringlist">
+      <value>Look at</value>
+    </inventoryverbs>
+    <displayverbs type="stringlist">
+      <value>Look at</value>
+    </displayverbs>
+    <drop type="boolean">false</drop>
+    <feature_usegive />
+    <listalias><![CDATA[&nbsp;&nbsp;&nbsp;- {this.alias}]]></listalias>
+    <look type="script"><![CDATA[
+      msg ("{b:Command pattern:}<br/><code style=\"background:lightgray;padding:4px\">"+this.cmdpattern+"</code>")
+    ]]></look>
+  </type>
+  <function name="ListAdd" parameters="list, data">
+    if (not ListContains(list, data)) {
+      list add (list, data)
+    }
+  </function>
+</asl>

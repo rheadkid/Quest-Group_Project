@@ -1,0 +1,761 @@
+<?xml version="1.0"?>
+<library>
+
+
+  <!--
+  This is the magic part from CombatLib/Deeper.
+  
+  The first part are various spell types. It is combat oriented so requires some work,
+  but is a starting point.
+  
+  The second part is all the spells. Again, many are combat orientated.
+  
+  Needs a way to invert spells, among other things.
+  -->
+
+
+
+
+  <!--
+  The basic spell can be learnt and cast.
+  -->
+  <type name="spell">
+    <displayverbs type="stringlist">
+      <value>Look at</value>
+      <value>Take</value>
+      <value>Learn</value>
+    </displayverbs>
+    <inventoryverbs type="stringlist">
+      <value>Look at</value>
+      <value>Learn</value>
+    </inventoryverbs>
+    <colour>blue</colour>
+    <level type="int">0</level>
+    <lastsfor type="int">0</lastsfor>
+    <drop type="boolean">false</drop>
+    <take type="boolean">true</take>
+    <skipmultitake type="boolean">true</skipmultitake>
+    <terminate type="script"></terminate>
+    <spelleffect type="script"></spelleffect>
+    <cannothold type="boolean">false</cannothold>
+    <usedefaultprefix type="boolean">false</usedefaultprefix>
+
+    <colourmylistalias type="script"><![CDATA[
+      if (HasString(this, "alias")) {
+        s = CapFirst(this.alias)
+      }
+      else {
+        s = CapFirst(this.name)
+      }
+      if (HasString(this, "listalias")) s = this.listalias
+      this.listalias = "<span style=\"font-style:italic;font-weight:bold;color:" + this.colour + "\">" + s + "</span>"
+    ]]></colourmylistalias>
+
+    <look type="script"><![CDATA[
+      if (not HasString(this, "desc")) {
+        P ("It is a spell!")
+      }
+      else {
+        P(this.desc)
+      }
+      P("[You require an intelligence of " + this.level + " to learn or cast this spell.]")
+    ]]></look>
+
+    <learn type="script"><![CDATA[
+      if (this.parent = spells_known) {
+        msg ("Er, you already know that one!")
+      }
+      else if ((game.pov.intelligence + game.pov.magicbonus) < this.level * 2) {
+        msg ("That spell is way out of your league. Perhaps if you were more intelligent...")
+      }
+      else if (OkayToLearn(this)) {
+        do(this, "dolearn")        
+      }
+    ]]></learn>
+    
+    <dolearn type="script"><![CDATA[
+      P (DynamicTemplate("SpellLearn", this))
+      do (this, "learnspell")
+    ]]></dolearn>
+
+    <learnspell type="script"><![CDATA[
+      this.parent = spells_known
+      this.inventoryverbs = Split ("Cast;Look at", ";")
+      this.scenery = true
+      UpdateSpells
+    ]]></learnspell>
+
+    <precast type="script"><![CDATA[
+      if ((game.pov.intelligence + game.pov.magicbonus) < this.level * 2) {
+        msg ("You need to be better at magic to cast that spell.")
+      }
+      else if (game.pov.currentspell = this) {
+        msg ("It is already active.")
+      }
+      else if (OkayToCast(this)) {
+        P("You cast <i>" + GetDisplayAlias(this) + "</i>.")
+        CancelSpell
+        if (DoesInherit(this, "targetedspellprovider") and not this.target = null) {
+          do (this, "casttarget")
+        }
+        else {
+          do (this, "cast")
+        }
+        if (GetBoolean(this, "singleuse")) {
+          this.parent = null
+          UpdateSpells
+        }
+      }
+    ]]></precast>
+    
+
+    <!--
+    Describes casting
+    -->
+    <describecast type="script"><![CDATA[
+      if (HasString (this, "description")) {
+        P(this.description)
+      }
+    ]]></describecast>
+  </type>
+
+
+
+
+  <!--
+  An attack spell has an element and a level.
+  It does an instant attack on all monsters based on them.
+  The learn script allows for spells of the same element to  be grouped effectively.
+  -->
+  <type name="attackspell">
+    <inherit name="spell"/>
+    <inherit name="magicalattackprovider"/>
+    <colour>red</colour>
+    
+    <cast type="script"><![CDATA[
+      // Iterate through all objects in the room
+      // Apply attack to those with the monster type that are not dead
+      do (this, "describecast")
+      game.pov.currectattack = this
+      SneakUpdate (4)
+      flag = False
+      foreach (obj, FilterByType(ScopeVisibleNotHeld (), "monster")) {
+        if (not obj.dead) {
+          this.target = obj
+          do (this, "spellattackmonster")
+          flag = True
+        }
+      }
+      if (not flag) {
+        msg ("... No monsters present")
+      }
+    ]]></cast>
+    
+    <dolearn type="script"><![CDATA[
+      // This version of dolearn will remove lesser attack spells 
+      // of the same element from the inventory
+      already = null
+      handled = false
+      foreach(o, GetDirectChildren(spells_known)) {
+        if (DoesInherit(o, "attackspell")) {
+          if (o.element = this.element and not GetBoolean(o, "singleuse")) {
+            already = o
+          }
+        }
+      }
+      if (not already = null) {
+        if (already.level > this.level) {
+          msg ("You already know the higher level equivalent of this spell.")
+          this.parent = null
+          handled = true
+        }
+      }
+      if (not handled) {
+        if (not already = null) {
+          if (this.level > already.level and not GetBoolean(this, "singleuse")) {
+            msg ("The lower level equivalent of this spell is now obsolete.")
+            already.parent = null
+          }
+        }
+        P (DynamicTemplate("SpellLearn", this))
+        do (this, "learnspell")
+      }
+    ]]></dolearn>
+  </type>
+
+
+
+
+  <!--
+  An attack spell targeted at a specific foe.
+  -->
+  <type name="targetedattackspell">
+    <inherit name="attackspell"/>
+    <inherit name="targetedspellprovider"/>
+    <potency type="int">200</potency>
+    <targettype>monster</targettype>
+  </type>
+    
+    
+  <!--
+  A spell targeted at a specific foe.
+  Needs a spelleffect script and a type in targettype
+  -->
+  <type name="targetedspell">
+    <inherit name="spell"/>
+    <inherit name="targetedspellprovider"/>
+    <targettype>monster</targettype>
+  </type>
+    
+    
+    
+
+
+
+  <!--
+  A banishing spell instantly moves all monsters with a 
+  "monstertype" string matching this spells "target" string
+  to null.
+  -->
+  <type name="banishingspell">
+    <inherit name="spell"/>
+    <colour>grey</colour>
+    
+    <cast type="script"><![CDATA[
+      // Iterate through all objects in the room
+      // Apply attack to those with the monster type
+      do (this, "describecast")
+      game.pov.currectattack = this
+      SneakUpdate (4)
+      flag = False
+      foreach (obj, FilterByType(ScopeVisibleNotHeld (), "monster")) {
+        if (obj.monstertype = this.target) {
+          P (Replace(this.description, "%", GetDisplayAlias(obj)))
+          obj.parent = null
+          flag = True
+        }
+      }
+      if (not flag) {
+        P ("... No affected monsters present")
+      }
+    ]]></cast>
+    
+  </type>
+
+
+
+
+
+  <!--
+  An instant spell, doing whatever is in the "spelleffect" script.
+  -->
+  <type name="nonattackspell">
+    <inherit name="spell"/>
+    <colour>blue</colour>
+    <cast type="script">
+      do (this, "describecast")
+      SneakUpdate (2)
+      do (this, "spelleffect")
+    </cast>
+  </type>
+
+
+
+
+
+
+  <!--
+  An on-going spell, using the magicaleffectprovider functionality.
+  -->
+  <type name="lastingspell">
+    <inherit name="spell"/>
+    <inherit name="magicaleffectprovider"/>
+    <colour>magenta</colour>
+    
+    <cast type="script">
+      do (this, "describecast")
+      do(this, "startmagiceffect")
+    </cast>
+  </type>
+
+
+
+
+   
+
+
+
+  <!--
+  Provider classes add extra functionality to disparate classes.
+  -->
+  
+  
+  <!--
+  For things that have on-going effects;
+  potions and some spells
+  -->
+  <type name="magicaleffectprovider">
+
+    <!--
+    Used by spells and potions to start and end the on-going effect.
+    -->
+    <startmagiceffect type="script">
+      SneakUpdate (2)
+      do (this, "spelleffect")
+      game.pov.currentspell = this
+      game.pov.status = this.status
+      game.pov.magiccountdown = this.lastsfor
+      if (this.cannothold) {
+        DropEverything
+      }
+      if (HasObject(this, "specialattack")) {
+        game.pov.equipped = this.specialattack
+      }
+    </startmagiceffect>
+
+    <endmagiceffect type="script">
+      game.pov.currentspell = null
+      game.pov.status = ""
+      do(this, "terminate")
+      if (HasObject(this, "specialattack")) {
+        game.pov.equipped = fists
+      }
+    </endmagiceffect>
+
+
+  </type>
+  
+  
+  
+  <type name="targetedspellprovider">
+    <inherit name="spell"/>
+    <cast type="script"><![CDATA[
+      // Iterate through all objects in the room
+      dict = NewStringDictionary()
+      foreach (obj, ScopeVisibleNotHeld ()) {
+        if (DoesInherit(obj, this.targettype)) {
+          dictionary add (dict, obj.name, obj.alias)
+        }
+      }
+      game.pov.currectattack = this
+      if (DictionaryCount(dict) = 0) {
+        msg ("... No monsters present")
+      }
+      else if (DictionaryCount(dict) = 1) {
+        foreach (key, dict) {
+          this.target = GetObject(key)
+          do (this, "casttarget")
+        }
+      }
+      else {
+        ShowMenu("Select target", dict, true) {
+          game.pov.currectattack.target = GetObject(result)
+          do (game.pov.currectattack, "casttarget")
+        }
+      }
+    ]]></cast>
+    <casttarget type="script"><![CDATA[
+      do (this, "describecast")
+      SneakUpdate (4)
+      if (DoesInherit(this, "magicalattackprovider")) {
+        do (this, "spellattackmonster")
+      }
+      else {
+        do (this, "spelleffect")
+      }
+    ]]></casttarget>
+    
+  </type>
+
+  
+  
+  <!--
+  For things that do instant elemental attacks;
+  some scrolls and some spells
+  -->
+  <type name="magicalattackprovider">
+    <!--
+    Handles an attack on the given monster).
+    Monster loses hit points according to the spell's level.
+    If they share an element, then no damage, if elements are opposed, damage is multplied by 4
+    Handles monsters with no elements too, but spell must have an element set.
+    -->
+    <spellattackmonster type="script"><![CDATA[
+      monster = this.target
+      this.target = null
+      if (monster.dead) {
+        P("... It is already dead.")
+      }
+      else {
+        do (monster, "settoattack")
+        s = "... "
+        if (HasInt(this, "basedamage")) {
+          basedamage = this.basedamage
+        }
+        else {
+          basedamage = game.elementaldamage * this.level / 100
+          if (HasInt(this, "potency")) basedamage = basedamage * this.potency / 100
+        }
+        if ( HasDelegateImplementation(monster, "magicresponse")) {
+          s = s + RunDelegateFunction(monster, "magicresponse")
+        }
+        else if (GetBoolean(monster, "absorbsmagic")) {
+          s = s + "The % seems to absorb the magic, and has <i>gained</i> " + basedamage + " hits!"
+          monster.hitpoints = monster.hitpoints + basedamage
+        }
+        else if (GetBoolean(monster, "reflectsmagic")) {
+          s = s + "The % seems to reflect the magic, and you take " + basedamage + " hits from your own magic!"
+          game.pov.hitpoints = game.pov.hitpoints - basedamage
+        }
+        else if (GetBoolean(monster, "ignoresmagic")) {
+          s = s + "The % seems unaffected by the magic!"
+        }
+        else {
+          switch (GetElementalPosition (this, monster)) {
+            case (1) {
+              damage = 0
+              if (HasString(monster, "ignoreselement")) {
+                s = s + monster.ignoreselement
+              }
+              else {
+                s = s + "The % seems to be unaffected!"
+              }
+            }
+            case (0) {
+              damage = basedamage
+              if (monster.hitpoints - damage > 0) {
+                if (HasString(monster, "hurtbyspell")) {
+                  s = s + monster.hurtbyspell
+                }
+                else {
+                  s = s + "The % recoils from the spell"
+                }
+              }
+              else {
+                if (HasString(monster, "death")) {
+                  s = s + monster.death
+                }
+                else {
+                  s = s + "The % falls to the ground dead"
+                }
+                do (monster, "makedead")
+              }
+            }
+            case (-1) {
+              damage =  4 * basedamage
+              if (monster.hitpoints - damage > 0) {
+                if (HasString(monster, "hurtbyelement")) {
+                  s = s + monster.hurtbyelement
+                }
+                else if (HasString(monster, "hurtbyspell")) {
+                  s = s + monster.hurtbyspell
+                }
+                else {
+                  s = s + "The % recoils from the spell"
+                }
+              }
+              else {
+                if (HasString(monster, "deathbyelement")) {
+                  s = s + monster.deathbyelement
+                }
+                else if (HasString(monster, "death")) {
+                  s = s + monster.death
+                }
+                else {
+                  s = s + "The % falls to the ground dead."
+                }
+                do (monster, "makedead")
+              }
+            }
+          }
+          monster.hitpoints = monster.hitpoints - damage
+          s = s + " (" + damage + " damage)."
+        }
+        msg(Replace(s, "%", GetDisplayAlias(monster)))
+        if (HasScript(monster, "onmagicattack")) {
+          monster.wasattackedwith = this
+          do(monster, "onmagicattack")
+        }
+      }
+    ]]></spellattackmonster>
+  </type>
+
+  
+  <function name="UpdateSpells">
+  </function>
+
+  
+  <!--
+  Override these for custom requires for spell learning and casting. It should return true
+  if the spell can be learnt or cast, or print a message saying why not and then
+  return false.
+  -->
+  <function name="OkayToLearn" parameters="spell" type="boolean">
+    return (true)
+  </function>
+
+  <function name="OkayToCast" parameters="spell" type="boolean">
+    return (true)
+  </function>
+
+  
+  <function name="IsUnableToHold" type="boolean">
+    return (GetBoolean(game.pov, "cannothold"))
+  </function>
+  
+  <object name="spells">
+    <inherit name="editor_room" />
+    <object name="spell_manastorm">
+      <inherit name="editor_object" />
+      <inherit name="nonattackspell" />
+      <alias>ManaStorm</alias>
+      <desc>This spell is only for debugging!</desc>
+      <level type="int">10</level>
+      <spelleffect type="script"><![CDATA[
+        msg ("You cast <i>Blast</i>")
+        flag = False
+        CancelSpell
+        foreach (obj, ScopeVisibleNotHeld ()) {
+          if (DoesInherit (obj, "monster") and not GetBoolean (obj, "dead")) {
+            s = "..."
+            damage = 100
+            if (obj.hitpoints - damage > 0) {
+              if (HasString(obj, "hurtbyspell")) {
+                s = s + obj.hurtbyspell
+              }
+              else {
+                s = s + "The % recoils from the spell"
+              }
+            }
+            else {
+              if (HasString(obj, "death")) {
+                s = s + obj.death
+              }
+              else {
+                s = s + "The % falls to the ground dead"
+              }
+              do (obj, "makedead")
+            }
+            flag = True
+            obj.hitpoints = obj.hitpoints - damage
+            s = s + " (" + damage + " damage)."
+            msg (Replace(s, "%", GetDisplayAlias(obj)))
+          }
+        }
+        if (not flag) {
+          msg ("... No monsters present")
+        }
+      ]]></spelleffect>
+    </object>
+    
+    <object name="spell_returning">
+      <inherit name="editor_object" />
+      <inherit name="nonattackspell" />
+      <description>You feel as though you are being turned inside out, suddenly you are elsewhere...</description>
+      <level type="int">2</level>
+      <alias>Returning</alias>
+      <desc>When you cast this spell you will immediately teleport to the dungeon entrance.</desc>
+      <spelleffect type="script">
+        MoveObject (player, entrance)
+      </spelleffect>
+    </object>
+    
+    <object name="spell_kobold_glamour">
+      <inherit name="editor_object" />
+      <inherit name="lastingspell" />
+      <status>KoboldGlamour</status>
+      <alias>Kobold glamour</alias>
+      <desc>While this spell is active you will look like a kobold, at least to casual inspection. Kobolds - and perhaps other goblinoids - will not attack you on sight. Of course, they will still attack if you attack them, and if you cast this in battle, do not expect them to suddenly be your friend!</desc>
+      <description>You cast the spell; you do not feel any different, but your hands look green and scaly now, so presumably it worked,</description>
+    </object>
+    
+    <object name="spell_tongues">
+      <inherit name="editor_object" />
+      <inherit name="lastingspell" />
+      <alias>Animal Tongues</alias>
+      <status>Tongues</status>
+      <description type="string"></description>
+      <desc>While this spell is active, you will be able to talk to animals - though they will not necessarily want to talk to you.</desc>
+    </object>
+    
+    <object name="spell_unlock">
+      <inherit name="editor_object" />
+      <inherit name="nonattackspell" />
+      <alias>Unlock</alias>
+      <desc>This spell will unlock any door or chest in the Citadel, as long as you have the Moonstone of Rhapsody.</desc>
+      <spelleffect type="script">
+        flag = False
+        foreach (ex, ScopeExits ()) {
+          if (GetBoolean (ex, "locked") and (Instr(ex.name, "guard") = 0)) {
+            ex.locked = False
+            flag = True
+            msg ("...The door " + ex.alias + " magically unlocks!")
+          }
+        }
+        if (not flag) {
+          msg ("...There were no doors locked")
+        }
+      </spelleffect>
+    </object>
+    
+    <object name="spell_cancel">
+      <inherit name="editor_object" />
+      <inherit name="nonattackspell" />
+      <alias>Cancel</alias>
+      <description type="string"></description>
+      <desc>Cancels any on-going spell you have active.</desc>
+      <scenery />
+    </object>
+    
+    <object name="spell_merchants_tongue">
+      <inherit name="editor_object" />
+      <inherit name="lastingspell" />
+      <alias>Merchant's Tongue</alias>
+      <status>Merchant's Tongue</status>
+      <desc>While in effect, the caster's skill at negotiating is enhanced. Goods can be sold for 25% more, and purchased for 25% less at a standard merchant.</desc>
+    </object>
+    
+    <object name="spell_stoneskin">
+      <inherit name="editor_object" />
+      <inherit name="lastingspell" />
+      <alias>Stoneskin</alias>
+      <status>Stoneskin</status>
+      <description type="string"></description>
+      <desc>While this spell is active, your skin will be hard as stone, protecting you from enemy attack - at least to some degree...</desc>
+      <level type="int">7</level>
+      <spelleffect type="script">
+        player.armourbonus = player.armourbonus + 3
+      </spelleffect>
+      <terminate type="script">
+        player.armourbonus = player.armourbonus - 3
+      </terminate>
+    </object>
+    
+    <object name="spell_banish_undead">
+      <inherit name="editor_object" />
+      <inherit name="banishingspell" />
+      <alias>Banish undead</alias>
+      <target>undead</target>
+      <level type="int">10</level>
+      <desc>Banishes all undead from the room; they will be no more (anything they are carrying will be lost too).</desc>
+    </object>
+    
+    <object name="spell_firebreath">
+      <inherit name="editor_object" />
+      <inherit name="attackspell" />
+      <alias>Firebreath</alias>
+      <level type="int">3</level>
+      <desc>Blast your foes with fire!</desc>
+      <element type="object">fire</element>
+    </object>
+    
+    <object name="spell_frostbreath">
+      <inherit name="editor_object" />
+      <inherit name="attackspell" />
+      <alias>Frostbreath</alias>
+      <level type="int">3</level>
+      <desc>Blast your foes with frost!</desc>
+      <element type="object">frost</element>
+    </object>
+    
+    <object name="spell_divinebreath">
+      <inherit name="editor_object" />
+      <inherit name="attackspell" />
+      <alias>Divinebreath</alias>
+      <level type="int">5</level>
+      <desc>Blast your foes with divine might! Especially good against undead.</desc>
+      <element type="object">divine</element>
+    </object>
+    
+    <object name="spell_stormbreath">
+      <inherit name="editor_object" />
+      <inherit name="attackspell" />
+      <alias>Stormbreath</alias>
+      <level type="int">3</level>
+      <desc>Blast your foes with lightning!</desc>
+      <element type="object">storm</element>
+    </object>
+    
+    <object name="spell_fire_immunity">
+      <inherit name="editor_object" />
+      <inherit name="lastingspell" />
+      <price type="int">40</price>
+      <notindescription />
+      <desc>While active, this spell will protect you from all fire-based damage, including the breath attack of dragons.</desc>
+      <level type="int">6</level>
+      <status>Immunity to fire</status>
+      <alias>Immune to Fire</alias>
+      <element type="object">fire</element>
+      <spelleffect type="script">
+        list add (game.pov.immunities, this.element.name)
+      </spelleffect>
+      <terminate type="script">
+        list remove (game.pov.immunities, this.element.name)
+      </terminate>
+    </object>
+    
+    <object name="spell_frost_immunity">
+      <inherit name="editor_object" />
+      <inherit name="lastingspell" />
+      <price type="int">40</price>
+      <notindescription />
+      <desc>While active, this spell will protect you from all frost-based damage.</desc>
+      <level type="int">5</level>
+      <status>Immunity to frost</status>
+      <alias>Immune to Frost</alias>
+      <element type="object">fire</element>
+      <spelleffect type="script">
+        list add (game.pov.immunities, this.element.name)
+      </spelleffect>
+      <terminate type="script">
+        list remove (game.pov.immunities, this.element.name)
+      </terminate>
+    </object>
+    
+    <object name="spell_storm_immunity">
+      <inherit name="editor_object" />
+      <inherit name="lastingspell" />
+      <price type="int">40</price>
+      <notindescription />
+      <desc>While active, this spell will protect you from all storm-based effects, such as lightning bolt.</desc>
+      <level type="int">5</level>
+      <status>Immunity to storm</status>
+      <alias>Immune to Storm</alias>
+      <element type="object">fire</element>
+      <spelleffect type="script">
+        list add (game.pov.immunities, this.element.name)
+      </spelleffect>
+      <terminate type="script">
+        list remove (game.pov.immunities, this.element.name)
+      </terminate>
+    </object>
+    
+    <object name="spell_necrotic_immunity">
+      <inherit name="editor_object" />
+      <inherit name="lastingspell" />
+      <price type="int">40</price>
+      <notindescription />
+      <desc>While active, this spell will protect you from most of the attacks of undead.</desc>
+      <level type="int">8</level>
+      <status>Immunity to undead</status>
+      <alias>Holy Protection</alias>
+      <element type="object">fire</element>
+      <spelleffect type="script">
+        list add (game.pov.immunities, this.element.name)
+      </spelleffect>
+      <terminate type="script">
+        list remove (game.pov.immunities, this.element.name)
+      </terminate>
+    </object>
+    
+    <object name="spell_lore">
+      <inherit name="editor_object" />
+      <inherit name="lastingspell" />
+      <alias>Lore</alias>
+      <status>Lore</status>
+      <description type="string"></description>
+      <desc>With the spell active, you may be able to gain extra knowledge on things you find.</desc>
+    </object>
+  </object>
+
+</library>

@@ -1,0 +1,26 @@
+  <object name="kvregion1">
+    <inherit name="editor_room" />
+    <object name="kvhall_of_yaml">
+      <inherit name="editor_room" />
+      <alias>Hall of Yaml</alias>
+      <description><![CDATA[This (Yaml) ain't mark-up.]]></description>
+    <exit alias="north" to="kvteepee">
+      <inherit name="northdirection" />
+    </exit>
+    </object>
+    <object name="kvteepee">
+      <inherit name="editor_room" />
+      <alias>Teepee</alias>
+      <description><![CDATA[This is the teepee you grew up in. (Not very much to see here, either.)]]></description>
+      <inside />
+      <object name="kvtomahawk">
+        <inherit name="editor_object" />
+        <alias>tomahawk</alias>
+        <scenery/>
+        <description><![CDATA[It's your trusty tomahawk.]]></description>
+      </object>
+    <exit alias="south" to="kvhall_of_yaml">
+      <inherit name="southdirection" />
+    </exit>
+    </object>
+  </object>

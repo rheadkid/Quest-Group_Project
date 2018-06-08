@@ -1,0 +1,15 @@
+<library>
+<object name="yourinitials_yourroomname">
+    <inherit name="gateway_type" />
+    <inherit name="editor_room" />
+    <attr name="feature_startscript" type="boolean">false</attr>
+    <gateway />
+    <alias>Your alias goes here</alias>
+    <usedefaultprefix type="boolean">false</usedefaultprefix>
+    <description><![CDATA[Your room description goes here]]></description>
+    <dimensionname>Your_dimension_name_that_shows_up_in_the_TRAVEL_menu_goes_here</dimensionname>
+    <attr name="_initialise_" type="script">
+      AddToHubGateway (this)
+    </attr>
+  </object>
+</library>

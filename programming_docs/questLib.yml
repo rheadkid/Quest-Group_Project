@@ -1,0 +1,12 @@
+- region1
+
+- Name: Hall of Yaml
+  Desc: This (Yaml) ain't mark-up.
+  
+- Name: Teepee
+  Inside: true
+  Gateway: true
+  Desc: This is the teepee you grew up in. (Not very much to see here, either.)
+  South: Hall of Yaml
+  Objs:
+    tomahawk: It's your trusty tomahawk.
